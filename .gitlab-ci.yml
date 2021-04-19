@@ -45,4 +45,4 @@ push to sftp:
     - ssh -p22 mms-germany.de@ssh.strato.de "rm -rf pages/_old_vue"
   when: always
   only:
-    - master
+    - main
