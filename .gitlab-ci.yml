@@ -38,9 +38,11 @@ push to sftp:
     - eval $(ssh-agent -s)
     - '[[ -f /.dockerenv ]] && echo -e "Host *\n\tStrictHostKeyChecking no\n\n" > ~/.ssh/config'
   script:
-    - ssh-add <(echo "$STAGING_PRIVATE_KEY")
+    - printenv STAGING_PRIVATE_KEY | ssh-add -
     - ssh -p22 mms-germany.de@ssh.strato.de "mkdir pages/_tmp_vue"
     - scp -P22 -r build/* mms-germany.de@ssh.strato.de:pages/_tmp_vue
     - ssh -p22 mms-germany.de@ssh.strato.de "mv pages/vue pages/_old_vue && mv pages/_tmp_vue pages/vue"
     - ssh -p22 mms-germany.de@ssh.strato.de "rm -rf pages/_old_vue"
-  when: manual
+  when: always
+  only:
+    - master
