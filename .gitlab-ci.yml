@@ -15,9 +15,10 @@ create_npmrc:
   script:
     - |
       echo '{
-        "domain": "$domain",
-        "clientId": "$clientId"
+        "domain": "${domain}",
+        "clientId": "{$clientId}"
       }' >> ./01-Login/auth_config.json
+    - cat ./01-Login/auth_config.json
     - docker build -t auth0-vue-01-login -f 01-Login/Dockerfile ./01-Login/
     - id=$(docker create auth0-vue-01-login)
     - docker cp $id:/app/dist .
