@@ -1,0 +1,46 @@
+stages:
+    - build
+    - deploy
+
+# This file is a template, and might need editing before it works on your project.
+default:
+  image: docker:latest
+services:
+    - docker:dind
+
+# If no .npmrc if included in the repo, generate a temporary one to use during the publish step
+# that is configured to publish to GitLab's NPM registry
+create_npmrc:
+  stage: build
+  script:
+    - |
+      echo "{
+        "domain": "${domain}",
+        "clientId": "${clientId}"
+      }" >> ./01-Login/auth_config.json
+    - docker build -t auth0-vue-01-login -f 01-Login/Dockerfile ./01-Login/
+    - id=$(docker create auth0-vue-01-login)
+    - docker cp $id:/app/dist .
+    - docker rm -v $id
+    - mv dist/ build
+
+  artifacts:
+    expire_in: 5 days
+    paths:
+      - build/
+
+
+push to sftp:
+  stage: deploy
+  before_script:
+    - 'which ssh-agent || ( apt-get update -y && apt-get install openssh-client -y )'
+    - mkdir -p ~/.ssh
+    - eval $(ssh-agent -s)
+    - '[[ -f /.dockerenv ]] && echo -e "Host *\n\tStrictHostKeyChecking no\n\n" > ~/.ssh/config'
+  script:
+    - ssh-add <(echo "$STAGING_PRIVATE_KEY")
+    - ssh -p22 mms-germany.de@ssh.strato.de "mkdir pages/_tmp_vue"
+    - scp -P22 -r build/* mms-germany.de@ssh.strato.de:pages/_tmp_vue
+    - ssh -p22 mms-germany.de@ssh.strato.de "mv pages/vue pages/_old_vue && mv pages/_tmp_vue pages/vue"
+    - ssh -p22 mms-germany.de@ssh.strato.de "rm -rf pages/_old_vue"
+  when: manual
