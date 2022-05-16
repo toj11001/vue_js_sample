@@ -1,9 +1,7 @@
 const express = require("express");
 const morgan = require("morgan");
 const cors = require("cors");
-const helmet = require("helmet");
-const jwt = require("express-jwt");
-const jwksRsa = require("jwks-rsa");
+const { auth } = require("express-oauth2-jwt-bearer");
 const { join } = require("path");
 const authConfig = require("./auth_config.json");
 
@@ -14,21 +12,12 @@ if (!authConfig.domain || !authConfig.audience) {
 }
 
 app.use(morgan("dev"));
-app.use(helmet());
 app.use(cors());
 app.use(express.static(join(__dirname, "dist")));
 
-const checkJwt = jwt({
-  secret: jwksRsa.expressJwtSecret({
-    cache: true,
-    rateLimit: true,
-    jwksRequestsPerMinute: 5,
-    jwksUri: `https://${authConfig.domain}/.well-known/jwks.json`
-  }),
-
+const checkJwt = auth({
   audience: authConfig.audience,
-  issuer: `https://${authConfig.domain}/`,
-  algorithms: ["RS256"]
+  issuerBaseURL: `https://${authConfig.domain}`,
 });
 
 app.get("/api/external", checkJwt, (req, res) => {
@@ -42,5 +31,5 @@ if (process.env.NODE_ENV === "production") {
     res.sendFile(join(__dirname, "dist", "index.html"));
   });
 }
-
-module.exports = app;
+const port = process.env.NODE_ENV === "production" ? 3000 : 3001;
+app.listen(port, () => console.log(`Server listening on port ${port}`));
